@@ -1,0 +1,8 @@
+.env
+.env.production
+.qwen/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+nohup.out
