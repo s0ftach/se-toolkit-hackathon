@@ -1,0 +1,11 @@
+[project]
+name = "gymtrack-backend"
+version = "2.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "aiosqlite>=0.20",
+    "pydantic>=2.0",
+    "PyJWT>=2.8",
+]
