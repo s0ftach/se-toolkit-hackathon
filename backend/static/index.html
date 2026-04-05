@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymTrack</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #e53e3e;
+      --primary-hover: #c53030;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1a202c;
+      --text-secondary: #718096;
+      --border: #cbd5e0;
+      --success: #38a169;
+      --shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: #2d3748; color: white; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.4rem; }
+    header p { opacity: .7; font-size: .85rem; }
+    .user-bar { display: flex; align-items: center; gap: .75rem; }
+    .user-bar span { font-size: .9rem; opacity: .9; }
+    .btn-sm { padding: .4rem .8rem; font-size: .85rem; border-radius: 6px; }
+
+    main { max-width: 800px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text); }
+
+    /* Auth screen */
+    #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+    #auth-screen .card { max-width: 400px; width: 100%; text-align: center; }
+    #auth-screen h2 { margin-bottom: .5rem; }
+    #auth-screen p { color: var(--text-secondary); font-size: .9rem; margin-bottom: 1.25rem; }
+
+    /* Form elements */
+    .form-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: stretch; }
+    input, select { padding: .6rem 1rem; border-radius: 8px; border: 1px solid var(--border); font-size: .95rem; background: white; min-width: 0; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(229,62,62,.15); }
+    button { padding: .6rem 1.2rem; border-radius: 8px; border: none; background: var(--primary); color: white; font-size: .95rem; cursor: pointer; white-space: nowrap; transition: background .15s; }
+    button:hover { background: var(--primary-hover); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.secondary { background: var(--text-secondary); }
+    button.secondary:hover { background: #4a5568; }
+
+    .msg { padding: .6rem .8rem; border-radius: 8px; font-size: .9rem; margin-top: .75rem; }
+    .msg.success { background: #f0fff4; color: var(--success); border: 1px solid var(--success); }
+    .msg.error { background: #fff5f5; color: var(--primary); border: 1px solid var(--primary); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin-bottom: 1.25rem; border-bottom: 2px solid var(--border); }
+    .tab { padding: .6rem 1.2rem; cursor: pointer; font-size: .95rem; font-weight: 500; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Chart */
+    canvas { margin-top: .5rem; }
+    .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: .5rem; opacity: .4; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid #e2e8f0; }
+    th { color: var(--text-secondary); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .form-row { flex-direction: column; }
+      input, select, button { width: 100%; }
+      header { flex-direction: column; align-items: flex-start; gap: .5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Screen -->
+  <div id="auth-screen">
+    <div class="card">
+      <h2>🏋️ GymTrack</h2>
+      <p>Track your workouts, see your progress</p>
+      <div style="text-align:left">
+        <div id="auth-form">
+          <label for="auth-username" style="font-size:.9rem;font-weight:500;display:block;margin-bottom:.4rem;">Username</label>
+          <input id="auth-username" type="text" placeholder="Choose a username" style="width:100%;margin-bottom:.75rem" />
+          <label for="auth-password" style="font-size:.9rem;font-weight:500;display:block;margin-bottom:.4rem;">Password</label>
+          <input id="auth-password" type="password" placeholder="Choose a password" style="width:100%;margin-bottom:1rem" />
+          <button onclick="register()" id="btn-register" style="width:100%;margin-bottom:.5rem">Create Account</button>
+          <div style="text-align:center;color:var(--text-secondary);font-size:.85rem;margin:.5rem 0">or</div>
+          <button onclick="login()" class="secondary" id="btn-login" style="width:100%">Log In</button>
+          <div id="auth-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until logged in) -->
+  <div id="app" style="display:none">
+    <header>
+      <div>
+        <h1>🏋️ GymTrack</h1>
+        <p>Track your workouts, see your progress</p>
+      </div>
+      <div class="user-bar">
+        <span id="welcome-user">Hello, user</span>
+        <button class="btn-sm secondary" onclick="logout()">Log Out</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" data-tab="log" onclick="switchTab('log')">Log Workout</div>
+        <div class="tab" data-tab="progress" onclick="switchTab('progress')">Progress</div>
+        <div class="tab" data-tab="history" onclick="switchTab('history')">History</div>
+      </div>
+
+      <!-- Tab: Log Workout -->
+      <div class="tab-content active" id="tab-log">
+        <div class="card">
+          <h2>Log a Set</h2>
+          <div class="form-row">
+            <select id="log-exercise" style="flex:2">
+              <option value="">Select exercise...</option>
+            </select>
+            <input id="log-weight" type="number" step="0.5" min="0" placeholder="Weight (kg)" style="flex:1" />
+            <input id="log-reps" type="number" min="1" placeholder="Reps" style="flex:1" />
+            <button onclick="logSet()" id="btn-log">Save</button>
+          </div>
+          <div id="log-msg"></div>
+        </div>
+
+        <div class="card">
+          <h2>Today's Workout</h2>
+          <table>
+            <thead><tr><th>Exercise</th><th>Weight</th><th>Reps</th></tr></thead>
+            <tbody id="today-body"></tbody>
+          </table>
+          <div id="today-empty" class="empty-state" style="padding:1rem">
+            <p style="font-size:.9rem">No sets logged today yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Progress -->
+      <div class="tab-content" id="tab-progress">
+        <div class="card">
+          <h2>Progress Chart</h2>
+          <div class="form-row" style="margin-bottom:.75rem">
+            <select id="chart-exercise" style="flex:1" onchange="loadChart()">
+              <option value="">Select exercise to view progress...</option>
+            </select>
+          </div>
+          <div id="chart-empty" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3v18h18"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16l4-8 4 4 4-8"/></svg>
+            <p style="font-size:.9rem">Select an exercise to see your progress.</p>
+          </div>
+          <div class="chart-grid" style="display:grid;gap:1.5rem;margin-top:.75rem">
+            <div>
+              <h3 style="font-size:.95rem;color:var(--text-secondary);margin-bottom:.25rem">Weight (kg)</h3>
+              <canvas id="chart-weight" style="display:none"></canvas>
+            </div>
+            <div>
+              <h3 style="font-size:.95rem;color:var(--text-secondary);margin-bottom:.25rem">Reps</h3>
+              <canvas id="chart-reps" style="display:none"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: History -->
+      <div class="tab-content" id="tab-history">
+        <div class="card">
+          <h2>Recent Workouts</h2>
+          <table>
+            <thead><tr><th>Date</th><th>Exercise</th><th>Weight (kg)</th><th>Reps</th></tr></thead>
+            <tbody id="history-body"></tbody>
+          </table>
+          <div id="history-empty" class="empty-state">
+            <p style="font-size:.9rem">No workouts logged yet. Start by logging your first set!</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API = '/api';
+    let token = localStorage.getItem('gymtrack_token');
+    let username = localStorage.getItem('gymtrack_username');
+    let chartInstance = null;
+    let repsChartInstance = null;
+    let exercises = [];
+
+    // ===== Auth =====
+    async function apiFetch(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json', ...opts.headers };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API}${path}`, { ...opts, headers });
+      if (res.status === 401) { logout(); return null; }
+      return res;
+    }
+
+    function showAuthMsg(text, type = 'error') {
+      const el = document.getElementById('auth-msg');
+      el.className = `msg ${type}`;
+      el.textContent = text;
+    }
+
+    async function register() {
+      const u = document.getElementById('auth-username').value.trim();
+      const p = document.getElementById('auth-password').value;
+      if (!u || !p) { showAuthMsg('Please fill in all fields.'); return; }
+      const btn = document.getElementById('btn-register');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      const data = await res.json();
+      if (!res.ok) { showAuthMsg(data.detail || 'Registration failed.'); return; }
+      token = data.access_token;
+      username = u;
+      localStorage.setItem('gymtrack_token', token);
+      localStorage.setItem('gymtrack_username', username);
+      showApp();
+    }
+
+    async function login() {
+      const u = document.getElementById('auth-username').value.trim();
+      const p = document.getElementById('auth-password').value;
+      if (!u || !p) { showAuthMsg('Please fill in all fields.'); return; }
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      btn.textContent = 'Logging in...';
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+      const data = await res.json();
+      if (!res.ok) { showAuthMsg(data.detail || 'Login failed.'); return; }
+      token = data.access_token;
+      username = u;
+      localStorage.setItem('gymtrack_token', token);
+      localStorage.setItem('gymtrack_username', username);
+      showApp();
+    }
+
+    function logout() {
+      token = null;
+      username = null;
+      localStorage.removeItem('gymtrack_token');
+      localStorage.removeItem('gymtrack_username');
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+
+    function showApp() {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('welcome-user').textContent = `Hello, ${username}`;
+      loadExercises();
+      loadHistory();
+      loadToday();
+    }
+
+    // ===== Tabs =====
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+      document.getElementById(`tab-${name}`).classList.add('active');
+      if (name === 'progress') loadChartExercises();
+      if (name === 'history') loadHistory();
+      if (name === 'log') loadToday();
+    }
+
+    // ===== Exercises =====
+    async function loadExercises() {
+      const res = await apiFetch('/exercises');
+      if (!res) return;
+      exercises = await res.json();
+      const sel = document.getElementById('log-exercise');
+      sel.innerHTML = '<option value="">Select exercise...</option>' +
+        exercises.map(e => `<option value="${e}">${e}</option>`).join('');
+    }
+
+    async function loadChartExercises() {
+      const res = await apiFetch('/user/exercises');
+      if (!res) return;
+      const userExercises = await res.json();
+      const sel = document.getElementById('chart-exercise');
+      sel.innerHTML = '<option value="">Select exercise to view progress...</option>' +
+        userExercises.map(e => `<option value="${e}">${e}</option>`).join('');
+    }
+
+    // ===== Log Set =====
+    function showLogMsg(text, type = 'success') {
+      const el = document.getElementById('log-msg');
+      el.className = `msg ${type}`;
+      el.textContent = text;
+      setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+    }
+
+    async function logSet() {
+      const exercise = document.getElementById('log-exercise').value;
+      const weight = document.getElementById('log-weight').value;
+      const reps = document.getElementById('log-reps').value;
+      if (!exercise || !weight || !reps) { showLogMsg('Please fill in all fields.', 'error'); return; }
+      const btn = document.getElementById('btn-log');
+      btn.disabled = true;
+      const res = await apiFetch('/sets', {
+        method: 'POST',
+        body: JSON.stringify({ exercise, weight_kg: parseFloat(weight), reps: parseInt(reps) })
+      });
+      btn.disabled = false;
+      if (!res || !res.ok) { showLogMsg('Failed to save set.', 'error'); return; }
+      showLogMsg(`Set saved: ${exercise} — ${weight}kg × ${reps} reps`);
+      document.getElementById('log-weight').value = '';
+      document.getElementById('log-reps').value = '';
+      loadToday();
+    }
+
+    // ===== Today's sets =====
+    async function loadToday() {
+      const res = await apiFetch('/sets/today');
+      if (!res) return;
+      const sets = await res.json();
+      const tbody = document.getElementById('today-body');
+      const emptyEl = document.getElementById('today-empty');
+      if (!sets.length) { tbody.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+      emptyEl.style.display = 'none';
+      tbody.innerHTML = sets.map(s => `<tr><td>${s.exercise}</td><td>${s.weight_kg} kg</td><td>${s.reps}</td></tr>`).join('');
+    }
+
+    // ===== Chart =====
+    async function loadChart() {
+      const exercise = document.getElementById('chart-exercise').value;
+      if (!exercise) {
+        document.getElementById('chart-weight').style.display = 'none';
+        document.getElementById('chart-reps').style.display = 'none';
+        document.getElementById('chart-empty').style.display = 'block';
+        document.querySelector('.chart-grid').style.display = 'none';
+        return;
+      }
+      const res = await apiFetch(`/sets?exercise=${encodeURIComponent(exercise)}`);
+      if (!res) return;
+      const sets = await res.json();
+      if (!sets.length) {
+        document.getElementById('chart-weight').style.display = 'none';
+        document.getElementById('chart-reps').style.display = 'none';
+        document.getElementById('chart-empty').style.display = 'block';
+        document.querySelector('.chart-grid').style.display = 'none';
+        return;
+      }
+      document.getElementById('chart-weight').style.display = 'block';
+      document.getElementById('chart-reps').style.display = 'block';
+      document.getElementById('chart-empty').style.display = 'none';
+      document.querySelector('.chart-grid').style.display = 'grid';
+
+      const labels = sets.map(s => s.logged_at.slice(0, 10));
+      const weights = sets.map(s => parseFloat(s.weight_kg));
+      const reps = sets.map(s => parseInt(s.reps));
+
+      // Destroy old charts
+      if (chartInstance) chartInstance.destroy();
+      if (repsChartInstance) repsChartInstance.destroy();
+
+      // Weight chart
+      chartInstance = new Chart(document.getElementById('chart-weight'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Weight (kg)',
+            data: weights,
+            borderColor: '#e53e3e',
+            backgroundColor: 'rgba(229,62,62,.1)',
+            tension: .3,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: false } },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // Reps chart
+      repsChartInstance = new Chart(document.getElementById('chart-reps'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Reps',
+            data: reps,
+            backgroundColor: 'rgba(56,161,105,.6)',
+            borderColor: '#38a169',
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    // ===== History =====
+    async function loadHistory() {
+      const res = await apiFetch('/sets?limit=30');
+      if (!res) return;
+      const sets = await res.json();
+      const tbody = document.getElementById('history-body');
+      const emptyEl = document.getElementById('history-empty');
+      if (!sets.length) { tbody.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+      emptyEl.style.display = 'none';
+      tbody.innerHTML = sets.map(s => `<tr><td>${s.logged_at.slice(0, 10)}</td><td>${s.exercise}</td><td>${s.weight_kg}</td><td>${s.reps}</td></tr>`).join('');
+    }
+
+    // ===== Init =====
+    if (token && username) showApp();
+  </script>
+</body>
+</html>
