@@ -4,11 +4,13 @@ A web application where gym-goers log their workouts via a simple form, stored i
 
 ## Demo
 
-> *Replace with actual screenshots once the app is running.*
-> 
-> Screenshot 1 — Log Workout form: Shows the exercise selector, weight/reps inputs, and today's workout table.
-> 
-> Screenshot 2 — Progress Chart: Shows a line chart of weight-over-time for a selected exercise.
+**Screenshot 1 — Log Workout form:**
+
+![Log Workout](screen1.png)
+
+**Screenshot 2 — Main dashboard:**
+
+![Main dashboard](screen2.png)
 
 ## Product Context
 
